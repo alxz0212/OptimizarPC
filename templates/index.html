@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reporte Big Data PC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .header-section { background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%); color: white; padding: 50px 0; margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 25px; transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px); }
+        .card-header { border-radius: 12px 12px 0 0 !important; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+        .verdict-title { font-size: 2.5rem; font-weight: 800; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .conclusion-box { background-color: #fff; border-left: 5px solid #0d6efd; padding: 20px; border-radius: 5px; font-size: 1.1rem; line-height: 1.6; }
+        
+        /* Estilos para Datos Crudos */
+        .raw-data-container { background-color: #1e1e1e; color: #00ff41; padding: 25px; border-radius: 10px; border: 1px solid #333; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+        .raw-data-pre { font-family: 'Consolas', 'Monaco', monospace; font-size: 1.1rem; white-space: pre-wrap; margin: 0; }
+        
+        .upgrade-item { border-left: 4px solid #ffc107; background: #fff3cd; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+        .upgrade-high { border-left-color: #dc3545; background: #f8d7da; }
+        .upgrade-plus { border-left-color: #0dcaf0; background: #e0f7fa; }
+    </style>
+</head>
+<body>
+
+    {% if error %}
+        <div class="container mt-5">
+            <div class="alert alert-danger text-center">
+                <h3>{{ error }}</h3>
+                <p>Ejecuta <code>main.exe</code> para generar datos.</p>
+            </div>
+        </div>
+    {% else %}
+
+    <div class="header-section text-center">
+        <div class="container">
+            <h1 class="display-4 fw-bold">Auditoría de PC para Big Data</h1>
+            <p class="lead opacity-75">Última actualización: {{ data.timestamp }}</p>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        <!-- Veredicto Principal -->
+        <div class="row mb-5 text-center">
+            <div class="col-12">
+                <h2 class="verdict-title {{ verdict_class }}">{{ verdict }}</h2>
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8 text-start">
+                        <div class="conclusion-box shadow-sm">
+                            <h4 class="text-primary mb-3">Conclusión del Experto:</h4>
+                            {{ conclusion }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Columna Izquierda: Estado Actual y Herramientas -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        Estado de Componentes
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for rec in recs %}
+                                <li class="list-group-item d-flex align-items-center">
+                                    {% if rec.type == 'success' %} <span class="badge bg-success me-3">✓</span>
+                                    {% elif rec.type == 'warning' %} <span class="badge bg-warning text-dark me-3">!</span>
+                                    {% else %} <span class="badge bg-danger me-3">X</span>
+                                    {% endif %}
+                                    {{ rec.msg }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Mejoras de Hardware (NUEVO) -->
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        Mejoras de Hardware Sugeridas
+                    </div>
+                    <div class="card-body">
+                        {% for up in upgrades %}
+                            <div class="upgrade-item {% if up.priority == 'Alta' %}upgrade-high{% elif 'Plus' in up.priority %}upgrade-plus{% endif %}">
+                                <h5 class="fw-bold">{{ up.component }} <span class="badge bg-secondary float-end">{{ up.priority }}</span></h5>
+                                <p class="mb-0">{{ up.suggestion }}</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección SSD Externo (NUEVO PLUS) -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card border-info">
+                    <div class="card-header bg-info text-white">
+                        💡 {{ ssd_info.title }}
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="text-info-emphasis">Beneficios Clave:</h5>
+                                <ul>
+                                    {% for benefit in ssd_info.benefits %}
+                                        <li>{{ benefit }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="alert alert-light border">
+                                    <strong>Cómo usarlo:</strong> {{ ssd_info.usage }}
+                                </div>
+                                <div class="alert alert-success border-0">
+                                    <strong>Recomendación:</strong> {{ ssd_info.recommendation }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Software -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-dark text-white">
+                        Software Recomendado para Instalar
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for tool in tools %}
+                            <div class="col-md-4 mb-3">
+                                <div class="border p-3 rounded h-100 bg-light">
+                                    <h5 class="text-primary fw-bold">{{ tool.name }}</h5>
+                                    <p class="small text-muted mb-0">{{ tool.desc }}</p>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Datos Crudos (VISIBILIDAD MEJORADA) -->
+        <div class="row mt-5 mb-5">
+            <div class="col-12">
+                <h3 class="mb-3 border-bottom pb-2">Datos Crudos del Sistema (Log Completo)</h3>
+                <div class="raw-data-container">
+                    <pre class="raw-data-pre">{{ data.raw_text }}</pre>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
