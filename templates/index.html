@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reporte Big Data PC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Librería para generar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
     <style>
         body { background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .header-section { background: linear-gradient(135deg, #0d6efd 0%, #0099ff 100%); color: white; padding: 50px 0; margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
@@ -21,9 +24,83 @@
         .upgrade-item { border-left: 4px solid #ffc107; background: #fff3cd; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
         .upgrade-high { border-left-color: #dc3545; background: #f8d7da; }
         .upgrade-plus { border-left-color: #0dcaf0; background: #e0f7fa; }
+
+        /* GAUGE (Velocímetro) CSS Puro */
+        .gauge-wrapper {
+            position: relative;
+            width: 200px;
+            height: 100px; /* Semicírculo */
+            margin: 0 auto 20px;
+            overflow: hidden;
+        }
+        .gauge-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: #e9ecef;
+            box-sizing: border-box;
+        }
+        .gauge-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: conic-gradient(
+                #dc3545 0deg 60deg,
+                #ffc107 60deg 120deg,
+                #198754 120deg 180deg,
+                transparent 180deg
+            );
+            /* Máscara para hacer el arco */
+            mask: radial-gradient(transparent 60%, black 61%);
+            -webkit-mask: radial-gradient(transparent 60%, black 61%);
+            transform: rotate(-90deg); /* Iniciar desde la izquierda */
+        }
+        .gauge-needle {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            height: 90px;
+            background: #333;
+            transform-origin: bottom center;
+            transform: rotate(-90deg); /* Posición inicial 0% */
+            transition: transform 1.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 10;
+            border-radius: 2px;
+        }
+        .gauge-needle::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: -5px;
+            width: 14px;
+            height: 14px;
+            background: #333;
+            border-radius: 50%;
+        }
+        .gauge-score {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-top: -10px;
+            color: #333;
+        }
+        .gauge-label {
+            text-align: center;
+            font-size: 1rem;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
-<body>
+<body id="report-content">
 
     {% if error %}
         <div class="container mt-5">
@@ -38,11 +115,76 @@
         <div class="container">
             <h1 class="display-4 fw-bold">Auditoría de PC para Big Data</h1>
             <p class="lead opacity-75">Última actualización: {{ data.timestamp }}</p>
+
+            <!-- Botón de Descarga (Oculto al imprimir/generar PDF) -->
+            <button onclick="downloadPDF()" class="btn btn-light text-primary fw-bold mt-3 shadow-sm" data-html2canvas-ignore="true">
+                📄 Descargar Reporte PDF
+            </button>
         </div>
     </div>
 
     <div class="container">
         
+        <!-- SECCIÓN WOW: Velocímetro y Versus -->
+        <div class="row mb-5">
+            <!-- Velocímetro -->
+            <div class="col-md-5 text-center mb-4 mb-md-0">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <h4 class="mb-4 text-uppercase fw-bold text-secondary">Índice de Potencia</h4>
+
+                        <div class="gauge-wrapper">
+                            <div class="gauge-bg"></div>
+                            <div class="gauge-fill"></div>
+                            <!-- Cálculo de rotación: -90deg (0%) a 90deg (100%). Rango total 180deg. -->
+                            <!-- Formula: -90 + (score * 1.8) -->
+                            <div class="gauge-needle" style="transform: rotate({{ -90 + (power_index * 1.8) }}deg);"></div>
+                        </div>
+
+                        <div class="gauge-score">{{ power_index }}%</div>
+                        <div class="gauge-label">Capacidad vs Servidor Ideal</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla Versus -->
+            <div class="col-md-7">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white text-center">
+                        TU MÁQUINA <span class="text-danger">VS</span> SERVIDOR IDEAL
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0 text-center align-middle h-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Componente</th>
+                                    <th class="text-primary">Tu PC</th>
+                                    <th class="text-success">Servidor Big Data</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="fw-bold">RAM</td>
+                                    <td>{{ comparison.user.ram }}</td>
+                                    <td>{{ comparison.ideal.ram }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Procesador</td>
+                                    <td>{{ comparison.user.cpu }}</td>
+                                    <td>{{ comparison.ideal.cpu }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Almacenamiento</td>
+                                    <td>{{ comparison.user.disk }}</td>
+                                    <td>{{ comparison.ideal.disk }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Veredicto Principal -->
         <div class="row mb-5 text-center">
             <div class="col-12">
@@ -63,7 +205,7 @@
             <div class="col-lg-6">
                 <div class="card h-100">
                     <div class="card-header bg-primary text-white">
-                        Estado de Componentes
+                        Detalle de Componentes
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">
@@ -167,5 +309,24 @@
     {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function downloadPDF() {
+            // Seleccionamos todo el cuerpo del documento
+            const element = document.getElementById('report-content');
+
+            // Configuración del PDF
+            const opt = {
+                margin:       [0.5, 0.5], // Márgenes superior/izq
+                filename:     'Reporte_BigData_PC.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true }, // Escala 2 para mejor calidad
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // Generar y guardar
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
 </body>
 </html>

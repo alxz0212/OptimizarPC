@@ -58,6 +58,26 @@ def parse_last_report(filepath):
 
     return data
 
+def calculate_power_index(data):
+    """Calcula un puntaje del 0 al 100 comparado con un servidor ideal."""
+    # Servidor Ideal (Referencia): 64GB RAM, 16 Cores, 2TB SSD
+    ideal_ram = 64
+    ideal_cores = 16
+    ideal_disk = 2000 # GB
+
+    # Pesos
+    w_ram = 0.5
+    w_cpu = 0.3
+    w_disk = 0.2
+
+    # Cálculo (topeado al 100%)
+    score_ram = min(data["ram_total_gb"] / ideal_ram, 1.0) * 100
+    score_cpu = min(data["cpu_cores"] / ideal_cores, 1.0) * 100
+    score_disk = min(data["disk_free_gb"] / ideal_disk, 1.0) * 100
+
+    total_score = (score_ram * w_ram) + (score_cpu * w_cpu) + (score_disk * w_disk)
+    return int(total_score)
+
 def get_hardware_upgrades(data):
     """Genera sugerencias de compra/mejora de hardware."""
     upgrades = []
@@ -157,6 +177,7 @@ def index():
 
     recommendations, score = generate_analysis(data)
     upgrades = get_hardware_upgrades(data)
+    power_index = calculate_power_index(data)
     
     # Veredicto y Conclusión
     if score >= 8:
@@ -192,6 +213,20 @@ def index():
         "usage": "Conéctalo y configura tus herramientas (Hadoop/Spark) para que lean los datos directamente desde la unidad externa (ej. D:/datasets).",
         "recommendation": "Busca modelos como Samsung T7 o SanDisk Extreme."
     }
+    
+    # Datos para la tabla comparativa
+    comparison = {
+        "user": {
+            "ram": f"{data['ram_total_gb']:.1f} GB",
+            "cpu": f"{data['cpu_cores']} Núcleos",
+            "disk": f"{data['disk_free_gb']:.1f} GB Libres"
+        },
+        "ideal": {
+            "ram": "64 GB",
+            "cpu": "16 Núcleos",
+            "disk": "2000 GB (2TB)"
+        }
+    }
 
     return render_template('index.html', 
                            data=data, 
@@ -201,7 +236,9 @@ def index():
                            verdict_class=verdict_class, 
                            conclusion=conclusion,
                            tools=tools,
-                           ssd_info=ssd_info)
+                           ssd_info=ssd_info,
+                           power_index=power_index,
+                           comparison=comparison)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -2,7 +2,14 @@ import psutil
 import platform
 import os
 import time
+import subprocess
 from datetime import datetime
+import cpuinfo
+import traceback
+import multiprocessing
+
+# Variable global para cachear el nombre del procesador y no buscarlo en cada ciclo
+_CPU_NAME_CACHE = None
 
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -14,6 +21,65 @@ def get_size(bytes, suffix="B"):
             return f"{bytes:.2f}{unit}{suffix}"
         bytes /= factor
 
+def get_cpu_name():
+    global _CPU_NAME_CACHE
+    if _CPU_NAME_CACHE:
+        return _CPU_NAME_CACHE
+
+    cpu_name = None
+    
+    # Intento 1: Usar py-cpuinfo (Funciona en Windows, Mac y Linux)
+    try:
+        info = cpuinfo.get_cpu_info()
+        cpu_name = info.get('brand_raw')
+    except Exception:
+        pass
+    
+    # Intento 2: Estrategias específicas por sistema operativo si falla el anterior
+    if not cpu_name:
+        system_name = platform.system()
+        
+        if system_name == "Windows":
+            try:
+                command = "wmic cpu get name"
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                output = subprocess.check_output(command, startupinfo=startupinfo, shell=False).decode()
+                lines = [line.strip() for line in output.split('\n') if line.strip() and line.strip() != 'Name']
+                if lines:
+                    cpu_name = lines[0]
+            except Exception:
+                pass
+                
+        elif system_name == "Darwin": # macOS
+            try:
+                # Comando nativo de macOS para obtener el nombre exacto del CPU
+                command = "sysctl -n machdep.cpu.brand_string"
+                output = subprocess.check_output(command, shell=True).decode().strip()
+                if output:
+                    cpu_name = output
+            except Exception:
+                pass
+                
+        elif system_name == "Linux":
+            try:
+                # Intentar leer /proc/cpuinfo en Linux
+                with open("/proc/cpuinfo", "r") as f:
+                    for line in f:
+                        if "model name" in line:
+                            cpu_name = line.split(":")[1].strip()
+                            break
+            except Exception:
+                pass
+
+    # Fallback: Usar información básica genérica
+    if not cpu_name:
+        uname = platform.uname()
+        cpu_name = uname.processor
+    
+    _CPU_NAME_CACHE = cpu_name
+    return cpu_name
+
 def get_system_info_str():
     lines = []
     lines.append("="*40 + " Información del Sistema " + "="*40)
@@ -23,7 +89,8 @@ def get_system_info_str():
     lines.append(f"Release: {uname.release}")
     lines.append(f"Versión: {uname.version}")
     lines.append(f"Máquina: {uname.machine}")
-    lines.append(f"Procesador: {uname.processor}")
+    
+    lines.append(f"Procesador: {get_cpu_name()}")
     return "\n".join(lines)
 
 def get_cpu_info_str():
@@ -85,12 +152,16 @@ def generate_snapshot():
     return full_report
 
 def main():
-    print("Iniciando monitorización... (Guardando en reporte_sistema.txt)")
+    # Esta línea es crucial para evitar bucles infinitos en Windows con PyInstaller/multiprocessing
+    multiprocessing.freeze_support()
+
+    print("Iniciando monitorización... Por favor espere, obteniendo datos del sistema...")
+    
     while True:
-        clear_screen()
-        
-        # Generamos y guardamos usando la función compartida
+        # Generamos primero (puede tardar la primera vez)
         full_report = generate_snapshot()
+        
+        clear_screen()
         print(full_report)
         
         print("\nInformación guardada en 'reporte_sistema.txt'")
@@ -102,3 +173,7 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         print("\nSaliendo...")
+    except Exception as e:
+        print(f"\nERROR CRÍTICO: {e}")
+        traceback.print_exc()
+        input("Presiona ENTER para cerrar...")
