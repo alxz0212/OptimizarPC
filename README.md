@@ -92,3 +92,7 @@ El sistema analiza automáticamente si necesitas:
 *   Un procesador con más núcleos (para paralelismo).
 *   Almacenamiento rápido (NVMe).
 *   **SSD Externo:** Se incluye una sección especial sobre cómo usar discos externos para manejar Terabytes de datos sin saturar tu sistema operativo.
+
+## 📸 Captura de Pantalla
+
+![Dashboard Reporte](Capturas/Page_Reporte.png)
